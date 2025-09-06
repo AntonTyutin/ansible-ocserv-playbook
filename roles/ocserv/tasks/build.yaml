@@ -1,0 +1,61 @@
+---
+# Tasks for updating ocserv when a newer version is available
+- name: Ensure build dependencies are installed
+  apt:
+    name:
+      - build-essential
+      - autoconf
+      - pkg-config
+      - protobuf-c-compiler
+      - libreadline-dev
+      # - freeradius
+      # - gawk
+      # - gnutls-bin
+      # - iproute2
+      # - yajl-tools
+      # - tcpdump
+      - libgnutls28-dev
+      - libev-dev
+      - libseccomp-dev
+      - liblz4-dev
+      - libsystemd-dev
+      - libpam0g-dev
+      - libwrap0-dev
+      - libmaxminddb-dev
+      - gperf
+    state: present
+    update_cache: yes
+
+- name: Create build directory
+  file:
+    path: /usr/local/src/ocserv
+    state: directory
+    mode: '0755'
+
+- name: Extract ocserv source
+  unarchive:
+    src: "{{ ocserv_tarball_url }}"
+    dest: "/usr/local/src/ocserv"
+    remote_src: yes
+    creates: "/usr/local/src/ocserv/ocserv-{{ ocserv_latest_version }}"
+
+# Build and install ocserv
+- name: Run autoreconf
+  command: autoreconf -fvi
+  args:
+    chdir: "/usr/local/src/ocserv/ocserv-{{ ocserv_latest_version }}"
+
+- name: Configure ocserv
+  command: ./configure --enable-seccomp --enable-lz4 --enable-systemd --enable-tcp-wrappers --enable-maxminddb
+  args:
+    chdir: "/usr/local/src/ocserv/ocserv-{{ ocserv_latest_version }}"
+
+- name: Build ocserv
+  command: make -j "{{ ansible_processor_vcpus | default(2) }}"
+  args:
+    chdir: "/usr/local/src/ocserv/ocserv-{{ ocserv_latest_version }}"
+
+- name: Install ocserv
+  command: make install
+  args:
+    chdir: "/usr/local/src/ocserv/ocserv-{{ ocserv_latest_version }}"

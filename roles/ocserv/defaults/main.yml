@@ -1,0 +1,99 @@
+---
+ocserv_users: []
+  # - name: user
+  #   password: !vault |
+  #         $ANSIBLE_VAULT;1.1;AES256
+  #         34306531613166613663316434313236656237316135616137326239366231656664326133646137
+  #         6339343235343232346331663233346237363634363038360a336261383335353831323238653936
+  #         36373565396432643830613431626537376564383734666265363861386430633439653335613036
+  #         6332386636376564620a383439663730613036663533646631666163663763396431336264363839
+  #         3434
+
+ocserv_passwd_file: /etc/ocserv/ocserv.passwd
+ocserv_per_user_config_dir: /etc/ocserv/config-per-user/
+ocserv_default_domain: vpn.example.com
+ocserv_ca_cert_file: # local file to use as a CA certificate for authentication
+
+# Main ocserv configuration
+ocserv_config:
+  # Authentication
+  auth: # list of auth methods, all must succeed
+    - type: plain # pam, plain, certificate, radius
+      options:
+        passwd: "{{ ocserv_passwd_file }}"
+  enable_auth: # list of additional auth methods, any one of them can succeed in addition to the main auth method
+    - type: certificate
+
+  # Network settings
+  listen_host: 127.0.0.1
+  tcp_port: 1443
+  udp_port: 1443
+  listen_proxy_proto: true
+
+  # Server settings for Ubuntu
+  run_as_user: nobody
+  run_as_group: daemon
+  server_cert: /etc/ocserv/fullchain.pem
+  server_key: /etc/ocserv/key.pem
+  ca_cert: /etc/ocserv/ca-cert.pem
+
+  # Security and performance
+  isolate_workers: true
+  max_clients: 20
+  max_same_clients: 5
+  keepalive: 1200
+  dpd: 60
+  mobile_dpd: 300
+  switch_to_tcp_timeout: 25
+  try_mtu_discovery: true
+  compression: true
+  no_compress_limit: 256
+  tls_priorities: "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-RSA:-VERS-SSL3.0:-VERS-TLS1.0:-VERS-TLS1.1:-ARCFOUR-128"
+
+  # Timeouts
+  auth_timeout: 240
+  idle_timeout: 1200
+  mobile_idle_timeout: 1800
+  min_reauth_time: 300
+  max_ban_score: 80
+  ban_reset_time: 300
+  cookie_timeout: 1200
+  deny_roaming: false
+  rekey_time: 172800
+  rekey_method: ssl
+
+  # Network configuration
+  device: vpns
+  predictable_ips: true
+  default_domain: "{{ ocserv_default_domain }}"
+  ipv4_network: 10.100.10.0
+  ipv4_netmask: 255.255.255.0
+  tunnel_all_dns: true
+  ping_leases: false
+
+  # DNS servers
+  dns:
+    - 8.8.8.8
+    - 1.1.1.1
+
+  # Routes
+  route: [] # use as default route
+    # - 10.10.10.0/255.255.255.0
+    # - 192.168.0.0/255.255.0.0
+
+  # No routes
+  no_route: []
+    # - 192.168.5.0/255.255.255.0
+
+  # User configuration
+  config_per_user: "{{ ocserv_per_user_config_dir }}"
+
+  # Cisco client compatibility
+  cisco_client_compat: true
+  dtls_legacy: true
+
+  # Other settings
+  use_occtl: true
+  pid_file: /run/ocserv.pid
+  socket_file: /run/ocserv.socket
+  config_file: /etc/ocserv/ocserv.conf

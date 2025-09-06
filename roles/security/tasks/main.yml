@@ -1,0 +1,48 @@
+---
+- name: Create user
+  ansible.builtin.user:
+    name: "{{ username }}"
+    shell: /bin/bash
+    create_home: yes
+    groups: sudo
+    append: yes
+
+- name: Set up authorized key
+  ansible.posix.authorized_key:
+    user: "{{ username }}"
+    key: "{{ ssh_public_key }}"
+    state: present
+    path: "/home/{{ username }}/.ssh/authorized_keys"
+    manage_dir: yes
+
+- name: Install UFW
+  apt:
+    name:
+      - ufw
+    state: present
+
+- name: Allow ssh in UFW
+  ufw:
+    rule: limit
+    port: ssh
+    proto: tcp
+
+- name: Set default policy to deny in UFW
+  ufw:
+    state: enabled
+    policy: deny
+
+- name: Configure UFW NAT rules
+  blockinfile:
+    path: /etc/ufw/before.rules
+    marker: "# {mark} ANSIBLE MANAGED NAT RULES"
+    block: |
+      # NAT
+      *nat
+      -F
+      :POSTROUTING ACCEPT [0:0]
+      -A POSTROUTING -o {{ external_interface_ipv4 }} -j MASQUERADE
+
+      COMMIT
+    create: yes
+  notify: restart ufw

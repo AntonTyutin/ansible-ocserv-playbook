@@ -1,0 +1,6 @@
+/.ansible
+/.ssh
+/.vscode
+/.shell_history
+/vendors/
+/inventory/hosts.yml

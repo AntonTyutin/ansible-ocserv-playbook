@@ -1,0 +1,10 @@
+---
+- name: Get interface with public IPv4 address
+  shell: >
+    ip -o -4 addr show | awk '$4 !~ /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/ {print $2; exit}'
+  register: external_interface_ipv4_command
+  changed_when: false
+
+- name: Set external_interface_ipv4 fact
+  set_fact:
+    external_interface_ipv4: "{{ external_interface_ipv4_command.stdout }}"

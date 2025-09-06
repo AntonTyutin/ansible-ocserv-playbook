@@ -1,0 +1,15 @@
+{%- macro add_to_octet(ip, increment) -%}
+    {%- set octets = ip.split('.') -%}
+    {%- set last_octet = (octets[3] | int) + (increment | int) -%}
+    {%- if last_octet >=0 and last_octet <= 255 -%}
+        {{- octets[0] }}.{{ octets[1] }}.{{ octets[2] }}.{{ last_octet -}}
+    {%- else -%}
+        {{- raise("Resulting octet value " ~ last_octet ~ " is out of valid range (0-255)") -}}
+    {%- endif -%}
+{%- endmacro -%}
+ipv4-network = {{ user.ipv4_network }}
+ipv4-netmask = {{ user.ipv4_netmask }}
+# Actually, there’s only one IP address that can be assigned to this VPN user ({{ add_to_octet(user.ipv4_network, 2) }}).
+# {{ user.ipv4_network }} is the network address
+# {{ add_to_octet(user.ipv4_network, 1) }} is always used by the VPN server.
+# {{ add_to_octet(user.ipv4_network, 3) }} is the broadcast address.

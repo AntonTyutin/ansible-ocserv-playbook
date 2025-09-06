@@ -1,0 +1,20 @@
+---
+# HAProxy configuration
+
+haproxy_config_env: {}
+haproxy_config_dir: /etc/haproxy
+haproxy_config_crt_dir: "{{ haproxy_config_dir }}/certs"
+haproxy_config_crt_list_file: "{{ haproxy_config_dir }}/crt-list.txt"
+haproxy_config_crt_list: []
+  # - file: domain.pem
+  #   cipher_params: alpn h2 ocsp-update on
+  #   sni: domain # (optional)
+haproxy_config_acme_challenge_account_thumbprint: "{{ acme_challenge_account_thumbprint }}"
+haproxy_config_routes_tcp: []
+haproxy_config_routes_web: []
+  # - name: somedomain
+  #   if: '{ req.hdr(host) -i somedomain.example.com some-domain.example.com }'
+  #   address: 10.100.10.200
+  #   port: 8080
+
+acme_challenge_account_thumbprint:

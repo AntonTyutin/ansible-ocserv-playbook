@@ -1,0 +1,13 @@
+services:
+  ansible:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/ansible
+      - ~/.ssh:/ansible/.ssh
+      - ".shell_history:/tmp/.shell_history"
+    environment:
+      - ANSIBLE_HOST_KEY_CHECKING=False
+      - HISTFILE=/tmp/.shell_history
+      - VAULT_PASS

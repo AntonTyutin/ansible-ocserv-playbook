@@ -1,0 +1,4 @@
+{% for cert in haproxy_config_crt_list %}
+{% set cert = {'file': 'unknown.pem', 'cipher_params': ['alpn', 'h2', 'ocsp-update on'], 'sni': ''} | ansible.builtin.combine(cert) %}
+{{ haproxy_config_crt_dir }}/{{ cert.file }} [{{ [cert.cipher_params] | ansible.builtin.flatten | join(' ') }}] {{ cert.sni }}
+{% endfor %}

@@ -1,0 +1,12 @@
+---
+- name: Create OCserv certificate directory
+  file:
+    path: "{{ deploy.ocserv_cert_dir }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ acme_user }}"
+    group: "{{ acme_group }}"
+
+- name: Install OCserv certificate
+  shell: "{{ acme_install_dir }}/acme.sh --install-cert -d {{ domain.name }} --key-file {{ deploy.ocserv_cert_dir }}/{{ deploy.ocserv_key_filename }} --fullchain-file {{ deploy.ocserv_cert_dir }}/{{ deploy.ocserv_fullchain_filename }} --reloadcmd '{{ deploy.ocserv_reload_cmd }}'"
+  become_user: "{{ acme_user }}"

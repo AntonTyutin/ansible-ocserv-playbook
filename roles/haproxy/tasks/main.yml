@@ -1,0 +1,44 @@
+---
+- name: HAProxy PPA repository
+  apt_repository:
+    repo: ppa:vbernat/haproxy-2.9
+    state: present
+
+- name: Install HAProxy
+  apt:
+    name: haproxy
+    state: present
+    update_cache: yes
+
+- name: Create Certificate dir
+  file:
+    path: "{{ haproxy_config_crt_dir }}"
+    state: directory
+    mode: '0775' # to be writeble for certificate renewal service
+
+- name: Create Certificate List File
+  template:
+    src: crt-list.txt.j2
+    dest: "{{ haproxy_config_crt_list_file }}"
+    mode: '0644'
+  notify: restart haproxy
+
+- name: Configure HAProxy
+  template:
+    src: haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    mode: '0644'
+  notify: restart haproxy
+
+- name: Allow 80 and 443 ports for HAProxy
+  ufw:
+    rule: allow
+    protocol: tcp
+    port: "{{ item }}"
+  loop: ['http', 'https']
+
+- name: Ensure HAProxy service is enabled and started
+  service:
+    name: haproxy
+    state: started
+    enabled: yes

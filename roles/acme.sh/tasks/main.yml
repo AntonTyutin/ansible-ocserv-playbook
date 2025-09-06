@@ -1,0 +1,6 @@
+---
+- import_tasks: init.yml
+  when: do == "init"
+
+- import_tasks: certificates-setup.yml
+  when: do == "certificates"

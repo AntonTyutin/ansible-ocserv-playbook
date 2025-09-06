@@ -1,0 +1,22 @@
+---
+- name: Setup generic configuration
+  hosts: all
+  become: true
+  roles:
+    - role: facts
+    - role: security
+    - role: common
+
+- name: VPN Server Setup
+  hosts: vpns
+  become: true
+  pre_tasks:
+  - include_role: { name: acme.sh, tasks_from: init }
+  roles:
+    - role: facts
+    - role: ocserv
+    - role: haproxy
+  post_tasks:
+  - include_role: { name: acme.sh, tasks_from: certificates-setup }
+
+

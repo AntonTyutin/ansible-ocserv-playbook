@@ -1,0 +1,9 @@
+---
+dependencies:
+  - name: geerlingguy.security
+    vars:
+      security_fail2ban_enabled: false
+      security_sudoers_passwordless: "{{ sudoers_passwordless }}"
+  - name: robertdebock.fail2ban
+    vars:
+      fail2ban_ignoreself: "true"

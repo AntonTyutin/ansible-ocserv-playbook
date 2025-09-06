@@ -1,0 +1,138 @@
+---
+- name: Get latest ocserv release info
+  uri:
+    url: "https://gitlab.com/api/v4/projects/openconnect%2Focserv/releases?order_by=released_at&sort=desc&per_page=1"
+    return_content: yes
+  register: ocserv_releases
+
+- name: Set latest ocserv version and tarball url
+  set_fact:
+    ocserv_latest_version: "{{ ocserv_releases.json[0].tag_name | regex_replace('^v', '') }}"
+    ocserv_tarball_url: "{{ ocserv_releases.json[0].assets.sources | selectattr('format', 'equalto', 'tar.gz') | map(attribute='url') | list | first }}"
+
+- name: Get installed ocserv version
+  command: ocserv --version
+  register: ocserv_installed_version
+  failed_when: false
+  changed_when: false
+
+- name: Parse installed ocserv version
+  set_fact:
+    ocserv_installed_version: "{{ (ocserv_installed_version.stderr | regex_search('OpenConnect VPN Server ([0-9.]+)', '\\1') | list | first) if ocserv_installed_version.rc == 0 else '0.0.0' }}"
+
+- name: Set build_needed fact when version comparison needed
+  set_fact:
+    ocserv_build_needed: "{{ ocserv_latest_version | string is version(ocserv_installed_version | string, '>', strict=False) }}"
+
+# Include build tasks if build is needed
+- include_tasks: build.yaml
+  when: ocserv_build_needed
+
+- name: Discover ocserv binary path
+  shell: command -v ocserv || true
+  register: ocserv_path_cmd
+  changed_when: false
+
+- name: Set ocserv binary path fact
+  set_fact:
+    ocserv_bin_path: "{{ ocserv_path_cmd.stdout | default('/usr/local/sbin/ocserv') | trim }}"
+
+- name: Create ocserv systemd service file
+  copy:
+    dest: /etc/systemd/system/ocserv.service
+    content: |
+      [Unit]
+      Description=OpenConnect VPN Server
+      After=network-online.target
+      After=dbus.service
+
+      [Service]
+      PrivateTmp=true
+      ExecStart={{ ocserv_bin_path }} --foreground --pid-file {{ ocserv_config.pid_file }} --config {{ ocserv_config.config_file }}
+      ExecReload=/bin/kill -HUP $MAINPID
+      Restart=on-failure
+      RestartSec=5s
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
+  notify: reload systemd
+
+- name: Flush handlers to reload systemd immediately
+  meta: flush_handlers
+
+- name: Create ocserv configuration dir
+  file:
+    path: "{{ ocserv_config.config_file | dirname }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy CA certificate file
+  copy:
+    src: "{{ ocserv_ca_cert_file }}"
+    dest: "{{ ocserv_config.ca_cert }}"
+    owner: root
+    group: root
+    mode: '0600'
+  notify: restart ocserv
+
+- name: Configure ocserv
+  template:
+    src: ocserv.conf.j2
+    dest: "{{ ocserv_config.config_file }}"
+    mode: '0644'
+  notify: restart ocserv
+
+- name: Configure users list
+  become: true
+  command:
+    cmd: ocpasswd -c {{ ocserv_passwd_file }} {{ user.name }}
+    stdin: "{{ user.password }}"
+  loop: "{{ ocserv_users }}"
+  loop_control:
+    loop_var: user
+  no_log: true
+  when: user.password is defined
+  notify: restart ocserv
+
+- name: Ensure per-user config directory exists
+  file:
+    path: "{{ ocserv_per_user_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Apply per-user config
+  template:
+    src: per-user-config.static-ip.j2
+    dest: "{{ ocserv_per_user_config_dir }}/{{ user.name }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ ocserv_users }}"
+  loop_control:
+    loop_var: user
+  no_log: true
+  when: user.ipv4_network is defined
+  notify: restart ocserv
+
+- name: Ensure kernel ip forwarding is enabled
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: 1
+    state: present
+
+- name: Add UFW forwarding rules for each vpns interface
+  ufw:
+    rule: allow
+    route: yes
+    interface_in: "{{ item }}"
+    interface_out: "{{ external_interface_ipv4 }}"
+  loop: "{{ range(10) | map('regex_replace', '^', ocserv_config.device) | list }}"
+
+- name: Enable ocserv service
+  systemd:
+    name: ocserv
+    enabled: yes
+  notify: restart ocserv

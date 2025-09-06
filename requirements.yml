@@ -1,0 +1,6 @@
+---
+roles:
+  - name: geerlingguy.security
+    src: https://github.com/geerlingguy/ansible-role-security
+  - name: robertdebock.fail2ban
+    src: https://github.com/robertdebock/ansible-role-fail2ban

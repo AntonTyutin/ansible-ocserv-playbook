@@ -1,0 +1,22 @@
+---
+- set_fact:
+    haproxy_pem_path: "{{ deploy.haproxy_pem_path | default('/etc/haproxy/certs') }}"
+
+- name: Ensure HAProxy certificate directory exists and is writable for acme user
+  file:
+    path: "{{ haproxy_pem_path }}"
+    state: directory
+    mode: '0775'
+    owner: root
+    group: "{{ acme_group }}"
+    force: yes
+
+- name: Deploy certificates to HAProxy
+  shell: "{{ acme_install_dir }}/acme.sh --deploy -d {{ domain.name }} --deploy-hook {{ deploy.type }}"
+  become_user: "{{ acme_user }}"
+  environment:
+    DEPLOY_HAPROXY_HOT_UPDATE: "{{ deploy.haproxy_hot_update | default('no') }}"
+    DEPLOY_HAPROXY_RELOAD_CMD: "{{ deploy.haproxy_reload_cmd | default('sudo /usr/bin/systemctl reload haproxy') }}"
+    DEPLOY_HAPROXY_PEM_PATH: "{{ haproxy_pem_path }}"
+    # Ensure the certificate file exists in the HAProxy PEM path
+    creates: "{{ haproxy_pem_path ~ '/' ~ domain.name ~ '.pem' }}"

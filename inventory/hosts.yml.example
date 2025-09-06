@@ -1,0 +1,12 @@
+all:
+  children:
+    servers:
+
+servers:
+  hosts:
+    myhostname:
+      ansible_host: my-ssh-hostname
+      ansible_user: user
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  

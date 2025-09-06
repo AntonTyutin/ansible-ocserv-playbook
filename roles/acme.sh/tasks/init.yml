@@ -1,0 +1,38 @@
+---
+- name: Create acme user group
+  user:
+    name: "{{ acme_group }}"
+    system: yes
+
+- name: Create acme user
+  user:
+    name: "{{ acme_user }}"
+    group: "{{ acme_group }}"
+    home: "{{ acme_home }}"
+    shell: /bin/bash
+    system: yes
+
+- name: Allow acme user to run systemctl without password
+  copy:
+    dest: /etc/sudoers.d/acme-systemctl
+    content: "acme ALL=(ALL) NOPASSWD: /usr/bin/systemctl\n"
+    owner: root
+    group: root
+    mode: '0440'
+
+- name: Install acme.sh
+  shell: "curl -s https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh | sh -s -- --install-online --home '{{ acme_install_dir }}' --accountemail '{{ acme_email }}'"
+  become_user: "{{ acme_user }}"
+  args:
+    creates: "{{ acme_install_dir }}/acme.sh"
+
+- name: Register ACME account
+  command: "{{ acme_install_dir }}/acme.sh --register-account -m {{ acme_email }} --server {{ acme_server }}"
+  become_user: "{{ acme_user }}"
+  register: acme_register_result
+  changed_when: false
+
+- name: Set ACME challenge account thumbprint
+  set_fact:
+    acme_challenge_account_thumbprint: "{{ acme_register_result.stdout_lines | select('match', '.*ACCOUNT_THUMBPRINT=') | first | regex_replace('.*ACCOUNT_THUMBPRINT=\\x27(.*)\\x27.*', '\\1') }}"
+

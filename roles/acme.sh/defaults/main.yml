@@ -1,0 +1,28 @@
+---
+# ACME.sh user and group configuration
+acme_user: acme
+acme_group: acme
+acme_home: /home/acme
+
+# ACME.sh installation and configuration
+acme_email: admin@minity.ru
+acme_server: letsencrypt
+acme_install_dir: "{{ acme_home }}"
+
+# ACME challenge account thumbprint (populated after account registration)
+acme_challenge_account_thumbprint: ""
+
+# Domain configurations
+acme_domains: []
+  # - name: vpn.example.com
+  #   deploy:
+  #     - type: ocserv
+  #       ocserv_cert_dir: /etc/ocserv
+  #       ocserv_key_filename: key.pem
+  #       ocserv_fullchain_filename: fullchain.pem
+  #       ocserv_reload_cmd: "sudo /usr/bin/systemctl restart ocserv.service"
+  #     - type: haproxy
+  #       haproxy_hot_update: no
+  #       haproxy_reload_cmd: "sudo /usr/bin/systemctl reload haproxy"
+  #       haproxy_pem_path: /etc/haproxy/certs
+

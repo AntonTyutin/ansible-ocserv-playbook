@@ -1,0 +1,26 @@
+---
+- name: Issue certificates for domains
+  shell: "{{ acme_install_dir }}/acme.sh --issue -d {{ item.name }}{% if item.additional_names is defined %}{% for domain in item.additional_names %} -d {{ domain }}{% endfor %}{% endif %} --stateless --server {{ acme_server }}"
+  become_user: "{{ acme_user }}"
+  loop: "{{ acme_domains }}"
+  args:
+    creates: "{{ acme_home }}/.acme.sh/{{ item.name }}_ecc/"
+
+- name: Install OCserv certificate
+  include_tasks: install-ocserv.yml
+  loop: "{{ acme_domains | subelements('deploy') | selectattr('1.type', 'equalto', 'ocserv') | list }}"
+  loop_control:
+    loop_var: domain_deploy
+  vars:
+    domain: "{{ domain_deploy[0] }}"
+    deploy: "{{ domain_deploy[1] }}"
+
+
+- name: Deploy certificates to HAProxy
+  include_tasks: install-haproxy.yml
+  loop: "{{ acme_domains | subelements('deploy') | selectattr('1.type', 'equalto', 'haproxy') | list }}"
+  loop_control:
+    loop_var: domain_deploy
+  vars:
+    domain: "{{ domain_deploy[0] }}"
+    deploy: "{{ domain_deploy[1] }}"
